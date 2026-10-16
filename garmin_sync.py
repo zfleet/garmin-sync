@@ -366,7 +366,7 @@ def send_email(payload):
     jamais le Pi.
 
     NOTE (2026-10-15) : le SMTP sortant vers Google est bloqué au niveau
-    réseau chez Teddy (ports 587/465, bannière jamais reçue) — transport
+    réseau sur ce réseau (ports 587/465, bannière jamais reçue) — transport
     conservé au cas où, mais 'gmail' (API) est la voie recommandée.
     """
     if not SMTP_USER or not SMTP_PASS:

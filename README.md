@@ -82,7 +82,7 @@ Changer de transport = une ligne dans `.env` (`TRANSPORT=gmail`), rien d'autre.
    ```bash
    ./venv/bin/pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
    ```
-5. Dans `.env` : `TRANSPORT=gmail`, `GMAIL_CLIENT_SECRET=/home/pi/garmin-sync/client_secret.json`, `GMAIL_TOKEN=/home/pi/garmin-sync/token.json` (créé au premier run).
+5. Dans `.env` : `TRANSPORT=gmail`, `GMAIL_CLIENT_SECRET=~/garmin-sync/client_secret.json`, `GMAIL_TOKEN=~/garmin-sync/token.json` (créé au premier run).
 6. **Premier run à la main** : `./venv/bin/python garmin_sync.py` — le script affiche un lien, tu le valides dans ton navigateur, tu colles le code d'autorisation dans le terminal. Le `token.json` est créé (chmod 600) : les runs suivants (cron) n'ont plus besoin de toi.
 
 ## Transport email (SMTP) : mot de passe d'application

@@ -6,7 +6,7 @@ depuis un Raspberry Pi vers T1000, via ntfy, fichier local ou courriel (API Gmai
 ## Workflow Git
 
 - Toujours travailler sur une branche, jamais de push direct sur `main`.
-- Ouvrir une PR pour chaque changement, attendre la review de Teddy avant merge.
+- Ouvrir une PR pour chaque changement, attendre la review du mainteneur avant merge.
 - Commits en anglais, messages courts et descriptifs.
 
 ## Secrets (jamais dans git, jamais dans le chat)
@@ -24,7 +24,7 @@ depuis un Raspberry Pi vers T1000, via ntfy, fichier local ou courriel (API Gmai
   quitte jamais la machine ; l'échange du token se fait en HTTPS).
 - Le OOB `urn:ietf:wg:oauth:2.0:oob` est bloqué par Google pour les nouveaux
   clients OAuth — ne pas l'utiliser.
-- SMTP vers Gmail (587/465) est bloqué au niveau réseau chez Teddy
+- SMTP vers Gmail (587/465) est bloqué au niveau réseau sur ce réseau
   (bannière jamais reçue) : le transport `email` est conservé en repli,
   `gmail` (API, HTTPS/443) est la voie recommandée.
 - L'écran de consentement OAuth doit être en « En production », sinon le
