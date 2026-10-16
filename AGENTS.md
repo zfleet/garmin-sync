@@ -31,6 +31,9 @@ depuis un Raspberry Pi vers T1000, via ntfy, fichier local ou courriel (API Gmai
   refresh token expire après 7 jours.
 - La lib `garminconnect` retourne la Body Battery en dicts journaliers avec
   `bodyBatteryValuesArray` (pas des paires date/valeur).
+- `get_activities_by_date(day)` SANS `enddate` retourne toutes les activités
+  depuis `day` jusqu'à aujourd'hui : toujours passer `get_activities_by_date(day, day)`
+  pour le jour seul, sinon le compte de séances est gonflé.
 
 ## Conventions du script
 
