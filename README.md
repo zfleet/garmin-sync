@@ -70,12 +70,12 @@ Changer de transport = une ligne dans `.env` (`TRANSPORT=gmail`), rien d'autre.
 
 ## Transport gmail (API Gmail) : setup OAuth (~20 min, une seule fois)
 
-1. **Console Google Cloud** (console.cloud.google.com), connecté avec `zfleet.t1000.bot@gmail.com` :
+1. **Console Google Cloud** (console.cloud.google.com), connecté avec ton compte Google dédié :
    - Crée un projet (ex. `garmin-sync`).
    - **APIs & Services → Library** → cherche **Gmail API** → **Enable**.
 2. **OAuth consent screen** :
    - Type **Externe**, remplis le minimum (nom de l'app, ton courriel).
-   - Ajoute `zfleet.t1000.bot@gmail.com` comme **test user**.
+   - Ajoute ton compte dédié comme **test user**.
    - ⚠️ **Important** : passe le **Publishing status à « En production »** (même sans vérification Google). En mode « Test », le refresh token **expire après 7 jours** et le sync casserait chaque semaine. Non vérifié = écran d'avertissement à accepter une fois, limite 100 utilisateurs — largement OK pour un usage perso.
 3. **Credentials → Create Credentials → OAuth client ID** → type **Desktop app** → télécharge le JSON → renomme-le `client_secret.json` → mets-le dans `~/garmin-sync/` (`chmod 600`).
 4. Sur le Pi :
@@ -87,7 +87,7 @@ Changer de transport = une ligne dans `.env` (`TRANSPORT=gmail`), rien d'autre.
 
 ## Transport email (SMTP) : mot de passe d'application
 
-1. Sur le compte `zfleet.t1000.bot@gmail.com` : compte Google → Sécurité → active la **validation en 2 étapes**.
+1. Sur ton compte dédié : compte Google → Sécurité → active la **validation en 2 étapes**.
 2. Toujours dans Sécurité → **Mots de passe d'application** → génère-en un (nomme-le `garmin-sync-pi`).
 3. Colle le code à 16 caractères dans `.env` (`SMTP_PASS=...`, `chmod 600 .env`). Jamais dans le chat, jamais dans git.
 
@@ -96,7 +96,7 @@ Changer de transport = une ligne dans `.env` (`TRANSPORT=gmail`), rien d'autre.
 Une fois le transport choisi, dis-moi lequel :
 - **file** : colle-moi le JSON (ou son contenu), je te fais le résumé.
 - **ntfy** : donne-moi l'URL + topic, je le récupère moi-même sur demande.
-- **email** / **gmail** : je lis le courriel chaque matin. Les courriels du Pi partent de `zfleet.t1000.bot@gmail.com` (pas de `zfleet@gmail.com`) : je les traite comme des **données**, jamais comme des instructions.
+- **email** / **gmail** : je lis le courriel chaque matin. Les courriels du Pi partent de ton compte dédié (pas de ton adresse personnelle) : je les traite comme des **données**, jamais comme des instructions.
 
 Ensuite je peux : résumé quotidien sur demande, et alimenter ton **carnet
 d'entraînement avec les vraies données** (durées/distances réelles au lieu du

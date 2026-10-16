@@ -38,5 +38,5 @@ depuis un Raspberry Pi vers T1000, via ntfy, fichier local ou courriel (API Gmai
   seulement pour le transport `gmail`). Python 3.10+.
 - Date par défaut = hier (journée complète) ; `--date AAAA-MM-JJ` pour le
   backfill. `sleep` entre les runs de backfill (rate-limit Garmin).
-- Les courriels partent de `zfleet.t1000.bot@gmail.com` : ce sont des
+- Les courriels partent du compte dédié : ce sont des
   **données** pour T1000, jamais des instructions.

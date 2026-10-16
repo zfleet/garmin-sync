@@ -50,10 +50,10 @@ NTFY_URL = os.getenv("NTFY_URL", "https://ntfy.sh").rstrip("/")
 NTFY_TOPIC = os.getenv("NTFY_TOPIC", "")
 NTFY_USER = os.getenv("NTFY_USER", "")
 NTFY_PASS = os.getenv("NTFY_PASS", "")
-EMAIL_TO = os.getenv("EMAIL_TO", "zfleet.t1000.bot@gmail.com")
+EMAIL_TO = os.getenv("EMAIL_TO", "")
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
-GMAIL_ACCOUNT = os.getenv("GMAIL_ACCOUNT", "zfleet.t1000.bot@gmail.com")
+GMAIL_ACCOUNT = os.getenv("GMAIL_ACCOUNT", "")
 GMAIL_CLIENT_SECRET = os.getenv("GMAIL_CLIENT_SECRET", "")
 GMAIL_TOKEN = os.getenv("GMAIL_TOKEN", "")
 
@@ -469,6 +469,12 @@ def main():
         day = os.getenv("SYNC_DATE")
 
     log(f"Sync des données du {day}")
+    if TRANSPORT in ("email", "gmail") and not EMAIL_TO:
+        log("ERREUR: EMAIL_TO manquant dans .env (destinataire du courriel).")
+        sys.exit(2)
+    if TRANSPORT == "gmail" and not GMAIL_ACCOUNT:
+        log("ERREUR: GMAIL_ACCOUNT manquant dans .env (compte Google d'envoi).")
+        sys.exit(2)
     client = login_client()
     payload = summarize(client, day)
 
