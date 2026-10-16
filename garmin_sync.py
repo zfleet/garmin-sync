@@ -162,7 +162,9 @@ def summarize(client, day):
         summary["body_battery_max"] = max(values)
         summary["body_battery_last"] = values[-1]
 
-    acts = safe_call("get_activities_by_date", lambda: client.get_activities_by_date(day)) or []
+    # NOTE : enddate est obligatoire — sans lui, l'API retourne TOUTES les
+    # activités depuis `day` jusqu'à aujourd'hui (pas seulement ce jour-là).
+    acts = safe_call("get_activities_by_date", lambda: client.get_activities_by_date(day, day)) or []
     summary["activities"] = [
         {
             "type": a.get("activityType", {}).get("typeKey") or a.get("activityType"),
