@@ -11,6 +11,16 @@ Par jour : pas, distance, calories, FC repos/max/moy, HRV nuit, sommeil
 distance, FC moy), training readiness. Le brut Garmin est gardé sous `"raw"`
 dans le JSON au cas où.
 
+## Correction appliquée sur le filtrage des séances
+
+Le correctif important pour ce dépôt est le suivant :
+
+- `get_activities_by_date(day)` sans `enddate` retourne toutes les activités
+  depuis `day` jusqu'à aujourd'hui, ce qui gonfle le nombre de séances.
+- La bonne version est `get_activities_by_date(day, day)`.
+- Le script gère aussi le cas où une version d'API ne supporte pas l'appel
+  avec deux arguments, pour rester compatible en fallback.
+
 ## Installation (5-10 min sur un Pi)
 
 ```bash
@@ -105,8 +115,8 @@ ressenti actuel).
 ## Notes de prudence
 
 - **API non officielle** : `python-garminconnect` utilise les endpoints internes
-  de Garmin Connect. Ça marche bien en pratique, mais Garmin peut changer ses
-  APIs sans préavis → si le sync casse un jour, c'est probablement ça.
+de Garmin Connect. Ça marche bien en pratique, mais Garmin peut changer ses
+APIs sans préavis → si le sync casse un jour, c'est probablement ça.
 - **Identifiants** : vivent uniquement dans `.env` (chmod 600) sur ton Pi.
   Jamais dans git, jamais dans le chat.
 - **Vie privée** : avec `file` ou ntfy auto-hébergé, aucune donnée santé ne
