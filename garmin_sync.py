@@ -126,6 +126,46 @@ def _extract_body_battery_values(bb):
     return values
 
 
+def _extract_latest_weight(comp):
+    """Extrait la pesée la plus récente d'un payload get_body_composition.
+
+    Les entrées 'dateWeightList' portent 'date' (epoch ms) et 'weight'
+    (grammes chez Garmin). Le % de gras est cherché sous ses noms connus.
+    Ne lève jamais : retourne {} si rien d'exploitable.
+    """
+    try:
+        entries = []
+        if isinstance(comp, dict):
+            entries = comp.get("dateWeightList") or []
+        dated = []
+        for e in entries:
+            if not isinstance(e, dict):
+                continue
+            w = e.get("weight")
+            ts = e.get("date")
+            if isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0:
+                dated.append((ts if isinstance(ts, (int, float)) else 0, e))
+        if not dated:
+            return {}
+        ts, latest = max(dated, key=lambda t: t[0])
+        w = latest["weight"]
+        weight_kg = round(w / 1000, 1) if w > 1000 else round(float(w), 1)
+        out = {"weight_kg": weight_kg}
+        if ts:
+            from datetime import datetime, timezone
+
+            out["weight_date"] = datetime.fromtimestamp(ts / 1000, timezone.utc).date().isoformat()
+        for key in ("bodyFatPercent", "bodyFatPercentage", "percentFat"):
+            fat = latest.get(key)
+            if isinstance(fat, (int, float)) and not isinstance(fat, bool):
+                out["body_fat_pct"] = round(float(fat), 1)
+                break
+        return out
+    except Exception as exc:  # noqa: BLE001
+        log(f"WARN: parsing poids ({type(exc).__name__}: {exc})")
+        return {}
+
+
 def summarize(client, day):
     """Construit le résumé compact + garde le brut sous 'raw'."""
     summary = {"date": day, "source": "garmin-connect"}
@@ -182,7 +222,16 @@ def summarize(client, day):
         first = readiness[0] if isinstance(readiness, list) else readiness
         summary["training_readiness"] = (first or {}).get("score") or (first or {}).get("level")
 
-    payload = {"summary": summary, "raw": {"stats": stats, "sleep": sleep, "hrv": hrv}}
+    # Poids : pas une métrique quotidienne — on interroge une fenêtre de
+    # 31 jours se terminant le jour du sync et on garde la pesée la plus
+    # récente (balance Index ou saisie manuelle dans Garmin Connect).
+    comp_start = (date.fromisoformat(day) - timedelta(days=30)).isoformat()
+    comp = safe_call(
+        "get_body_composition", lambda: client.get_body_composition(comp_start, day)
+    ) or {}
+    summary.update(_extract_latest_weight(comp))
+
+    payload = {"summary": summary, "raw": {"stats": stats, "sleep": sleep, "hrv": hrv, "body_composition": comp}}
     return payload
 
 
@@ -323,6 +372,14 @@ def _build_email_message(payload):
     dist = s.get("distance_m")
     dist_txt = f"{round(dist / 1000, 2)} km" if dist else "n/d"
 
+    w = s.get("weight_kg")
+    if w is None:
+        weight_txt = "n/d"
+    else:
+        weight_txt = f"{w} kg (pesée du {s.get('weight_date') or '?'})"
+        if s.get("body_fat_pct") is not None:
+            weight_txt += f", gras {s['body_fat_pct']} %"
+
     body_lines = [
         f"Métriques Garmin du {day}",
         "",
@@ -335,6 +392,7 @@ def _build_email_message(payload):
         "Body Battery min/max/dernière : "
         f"{val(s.get('body_battery_min'))} / {val(s.get('body_battery_max'))} / {val(s.get('body_battery_last'))}",
         f"Training readiness : {val(s.get('training_readiness'))}",
+        f"Poids : {weight_txt}",
         f"Séances : {len(s.get('activities') or [])}",
     ]
     for a in s.get("activities") or []:
