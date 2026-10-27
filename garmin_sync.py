@@ -129,8 +129,9 @@ def _extract_body_battery_values(bb):
 def _extract_latest_weight(comp):
     """Extrait la pesée la plus récente d'un payload get_body_composition.
 
-    Les entrées 'dateWeightList' portent 'date' (epoch ms) et 'weight'
-    (grammes chez Garmin). Le % de gras est cherché sous ses noms connus.
+    Les entrées 'dateWeightList' portent 'date' (epoch ms), 'calendarDate'
+    (AAAA-MM-JJ) et 'weight' (grammes chez Garmin). Le % de gras est porté
+    par 'bodyFat' (autres noms acceptés par prudence).
     Ne lève jamais : retourne {} si rien d'exploitable.
     """
     try:
@@ -151,11 +152,14 @@ def _extract_latest_weight(comp):
         w = latest["weight"]
         weight_kg = round(w / 1000, 1) if w > 1000 else round(float(w), 1)
         out = {"weight_kg": weight_kg}
-        if ts:
+        cal = latest.get("calendarDate")
+        if isinstance(cal, str) and len(cal) == 10:
+            out["weight_date"] = cal
+        elif ts:
             from datetime import datetime, timezone
 
             out["weight_date"] = datetime.fromtimestamp(ts / 1000, timezone.utc).date().isoformat()
-        for key in ("bodyFatPercent", "bodyFatPercentage", "percentFat"):
+        for key in ("bodyFat", "bodyFatPercent", "bodyFatPercentage", "percentFat"):
             fat = latest.get(key)
             if isinstance(fat, (int, float)) and not isinstance(fat, bool):
                 out["body_fat_pct"] = round(float(fat), 1)
