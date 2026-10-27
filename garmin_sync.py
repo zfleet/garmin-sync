@@ -129,8 +129,9 @@ def _extract_body_battery_values(bb):
 def _extract_latest_weight(comp):
     """Extrait la pesée la plus récente d'un payload get_body_composition.
 
-    Les entrées 'dateWeightList' portent 'date' (epoch ms) et 'weight'
-    (grammes chez Garmin). Le % de gras est cherché sous ses noms connus.
+    Les entrées 'dateWeightList' portent 'date' (epoch ms), 'calendarDate'
+    (AAAA-MM-JJ) et 'weight' (grammes chez Garmin). Le % de gras est porté
+    par 'bodyFat' (autres noms acceptés par prudence).
     Ne lève jamais : retourne {} si rien d'exploitable.
     """
     try:
@@ -151,11 +152,14 @@ def _extract_latest_weight(comp):
         w = latest["weight"]
         weight_kg = round(w / 1000, 1) if w > 1000 else round(float(w), 1)
         out = {"weight_kg": weight_kg}
-        if ts:
+        cal = latest.get("calendarDate")
+        if isinstance(cal, str) and len(cal) == 10:
+            out["weight_date"] = cal
+        elif ts:
             from datetime import datetime, timezone
 
             out["weight_date"] = datetime.fromtimestamp(ts / 1000, timezone.utc).date().isoformat()
-        for key in ("bodyFatPercent", "bodyFatPercentage", "percentFat"):
+        for key in ("bodyFat", "bodyFatPercent", "bodyFatPercentage", "percentFat"):
             fat = latest.get(key)
             if isinstance(fat, (int, float)) and not isinstance(fat, bool):
                 out["body_fat_pct"] = round(float(fat), 1)
@@ -175,11 +179,24 @@ def summarize(client, day):
     summary["distance_m"] = stats.get("totalDistanceMeters")
     summary["calories_total"] = stats.get("totalKilocalories")
     summary["calories_active"] = stats.get("activeKilocalories")
-    summary["resting_hr"] = stats.get("restingHeartRateInBeatsPerMinute")
-    summary["max_hr"] = stats.get("maxHeartRateInBeatsPerMinute")
-    summary["avg_hr"] = stats.get("averageHeartRateInBeatsPerMinute")
+    summary["resting_hr"] = stats.get("restingHeartRate") or stats.get("restingHeartRateInBeatsPerMinute")
+    summary["max_hr"] = stats.get("maxHeartRate") or stats.get("maxHeartRateInBeatsPerMinute")
+    summary["avg_hr"] = stats.get("averageHeartRate") or stats.get("averageHeartRateInBeatsPerMinute")
     summary["floors"] = stats.get("floorsAscended")
     summary["active_seconds"] = stats.get("activeSeconds")
+
+    if not summary["avg_hr"]:
+        # Le résumé quotidien Garmin n'a pas de FC moyenne : on la calcule
+        # depuis les échantillons de la journée (get_heart_rates).
+        hr = safe_call("get_heart_rates", lambda: client.get_heart_rates(day)) or {}
+        samples = [
+            pair[1]
+            for pair in (hr.get("heartRateValues") or [])
+            if isinstance(pair, (list, tuple)) and len(pair) >= 2
+            and isinstance(pair[1], (int, float)) and pair[1] > 0
+        ]
+        if samples:
+            summary["avg_hr"] = round(sum(samples) / len(samples))
 
     sleep = safe_call("get_sleep_data", lambda: client.get_sleep_data(day)) or {}
     dto = sleep.get("dailySleepDTO") or {}
@@ -190,10 +207,13 @@ def summarize(client, day):
     summary["sleep_score"] = overall.get("value")
 
     hrv = safe_call("get_hrv_data", lambda: client.get_hrv_data(day)) or {}
-    summaries = hrv.get("hrvSummaries") or []
-    if summaries:
-        last = summaries[-1]
-        summary["hrv_last_night_avg_ms"] = last.get("lastNightAvg") or last.get("weeklyAvg")
+    # Payload réel : 'hrvSummary' (dict) ; ancienne forme : 'hrvSummaries' (liste).
+    hrv_sum = hrv.get("hrvSummary")
+    if not isinstance(hrv_sum, dict):
+        summaries = hrv.get("hrvSummaries") or []
+        hrv_sum = summaries[-1] if summaries else {}
+    if hrv_sum:
+        summary["hrv_last_night_avg_ms"] = hrv_sum.get("lastNightAvg") or hrv_sum.get("weeklyAvg")
 
     bb = safe_call("get_body_battery", lambda: client.get_body_battery(day, day)) or []
     values = _extract_body_battery_values(bb)
@@ -231,7 +251,7 @@ def summarize(client, day):
     ) or {}
     summary.update(_extract_latest_weight(comp))
 
-    payload = {"summary": summary, "raw": {"stats": stats, "sleep": sleep, "hrv": hrv, "body_composition": comp}}
+    payload = {"summary": summary, "raw": {"stats": stats, "sleep": sleep, "hrv": hrv, "body_composition": comp, "readiness": readiness}}
     return payload
 
 
