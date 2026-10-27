@@ -179,11 +179,24 @@ def summarize(client, day):
     summary["distance_m"] = stats.get("totalDistanceMeters")
     summary["calories_total"] = stats.get("totalKilocalories")
     summary["calories_active"] = stats.get("activeKilocalories")
-    summary["resting_hr"] = stats.get("restingHeartRateInBeatsPerMinute")
-    summary["max_hr"] = stats.get("maxHeartRateInBeatsPerMinute")
-    summary["avg_hr"] = stats.get("averageHeartRateInBeatsPerMinute")
+    summary["resting_hr"] = stats.get("restingHeartRate") or stats.get("restingHeartRateInBeatsPerMinute")
+    summary["max_hr"] = stats.get("maxHeartRate") or stats.get("maxHeartRateInBeatsPerMinute")
+    summary["avg_hr"] = stats.get("averageHeartRate") or stats.get("averageHeartRateInBeatsPerMinute")
     summary["floors"] = stats.get("floorsAscended")
     summary["active_seconds"] = stats.get("activeSeconds")
+
+    if not summary["avg_hr"]:
+        # Le résumé quotidien Garmin n'a pas de FC moyenne : on la calcule
+        # depuis les échantillons de la journée (get_heart_rates).
+        hr = safe_call("get_heart_rates", lambda: client.get_heart_rates(day)) or {}
+        samples = [
+            pair[1]
+            for pair in (hr.get("heartRateValues") or [])
+            if isinstance(pair, (list, tuple)) and len(pair) >= 2
+            and isinstance(pair[1], (int, float)) and pair[1] > 0
+        ]
+        if samples:
+            summary["avg_hr"] = round(sum(samples) / len(samples))
 
     sleep = safe_call("get_sleep_data", lambda: client.get_sleep_data(day)) or {}
     dto = sleep.get("dailySleepDTO") or {}
@@ -194,10 +207,13 @@ def summarize(client, day):
     summary["sleep_score"] = overall.get("value")
 
     hrv = safe_call("get_hrv_data", lambda: client.get_hrv_data(day)) or {}
-    summaries = hrv.get("hrvSummaries") or []
-    if summaries:
-        last = summaries[-1]
-        summary["hrv_last_night_avg_ms"] = last.get("lastNightAvg") or last.get("weeklyAvg")
+    # Payload réel : 'hrvSummary' (dict) ; ancienne forme : 'hrvSummaries' (liste).
+    hrv_sum = hrv.get("hrvSummary")
+    if not isinstance(hrv_sum, dict):
+        summaries = hrv.get("hrvSummaries") or []
+        hrv_sum = summaries[-1] if summaries else {}
+    if hrv_sum:
+        summary["hrv_last_night_avg_ms"] = hrv_sum.get("lastNightAvg") or hrv_sum.get("weeklyAvg")
 
     bb = safe_call("get_body_battery", lambda: client.get_body_battery(day, day)) or []
     values = _extract_body_battery_values(bb)
@@ -235,7 +251,7 @@ def summarize(client, day):
     ) or {}
     summary.update(_extract_latest_weight(comp))
 
-    payload = {"summary": summary, "raw": {"stats": stats, "sleep": sleep, "hrv": hrv, "body_composition": comp}}
+    payload = {"summary": summary, "raw": {"stats": stats, "sleep": sleep, "hrv": hrv, "body_composition": comp, "readiness": readiness}}
     return payload
 
 
